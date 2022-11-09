@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import PostLists from './components/PostLists'
 
 function App() {
-	const [count, setCount] = useState(0)
-
-	return <div className="App">Hello</div>
+	return (
+		<div className="App">
+			<PostLists />
+		</div>
+	)
 }
 
 export default App
