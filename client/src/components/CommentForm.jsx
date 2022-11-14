@@ -7,7 +7,7 @@ export function CommentForm({
 	onSubmit,
 	autoFocus = false,
 }) {
-	const [message, setMessage] = useState('')
+	const [message, setMessage] = useState(initialValue)
 
 	const handleSubmit = (e) => {
 		e.preventDefault()

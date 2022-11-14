@@ -55,32 +55,41 @@ app.get('/posts', async (req, res) => {
 
 app.get('/posts/:id', async (req, res) => {
 	return await commitToDb(
-		prisma.post.findUnique({
-			where: {
-				id: req.params.id,
-			},
-			select: {
-				body: true,
-				title: true,
-				comments: {
-					orderBy: {
-						createdAt: 'desc',
-					},
-					select: {
-						id: true,
-						message: true,
-						parentId: true,
-						createdAt: true,
-						user: {
-							select: {
-								id: true,
-								name: true,
-							},
+		prisma.post
+			.findUnique({
+				where: {
+					id: req.params.id,
+				},
+				select: {
+					body: true,
+					title: true,
+					comments: {
+						orderBy: {
+							createdAt: 'desc',
+						},
+						select: {
+							...COMMENT_SELECT_FIELDS,
+							_count: { select: { likes: true } },
 						},
 					},
 				},
-			},
-		})
+			})
+			.then(async (post) => {
+				const likes = await prisma.like.findMany({
+					where: {
+						userId: req.cookies.userId,
+						commentId: {
+							in: post.comments.map((comment) => comment.id),
+						},
+					},
+				})
+                return {
+                    ...post,
+                    comments: post.comments.map(comment => {
+                        const {_count, ...comment}
+                    })
+                }
+			})
 	)
 })
 
@@ -98,6 +107,57 @@ app.post('/posts/:id/comments', async (req, res) => {
 				postId: req.params.id,
 			},
 			select: COMMENT_SELECT_FIELDS,
+		})
+	)
+})
+
+app.put('/posts/:postId/comments/:commentId', async (req, res) => {
+	// error checking
+	if (req.body.message == '' || req.body.message == null) {
+		return res.send(app.httpErrors.badRequest('Message is required'))
+	}
+
+	const { userId } = await prisma.comment.findUnique({
+		where: { id: req.params.commentId },
+		select: { userId: true },
+	})
+	// incorrect user
+	if (userId !== req.cookies.userId) {
+		return res.send(
+			app.httpErrors.unauthorized(
+				'You do not have permission to edit this comment'
+			)
+		)
+	}
+	//update comment, return new message
+	return await commitToDb(
+		prisma.comment.update({
+			where: { id: req.params.commentId },
+			data: { message: req.body.message },
+			select: { message: true },
+		})
+	)
+})
+
+app.delete('/posts/:postId/comments/:commentId', async (req, res) => {
+	// error checking
+	const { userId } = await prisma.comment.findUnique({
+		where: { id: req.params.commentId },
+		select: { userId: true },
+	})
+	// incorrect user
+	if (userId !== req.cookies.userId) {
+		return res.send(
+			app.httpErrors.unauthorized(
+				'You do not have permission to delete this comment'
+			)
+		)
+	}
+	//update comment, return new message
+	return await commitToDb(
+		prisma.comment.delete({
+			where: { id: req.params.commentId },
+			select: { id: true },
 		})
 	)
 })

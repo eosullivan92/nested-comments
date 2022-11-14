@@ -6,7 +6,7 @@ import { useAsyncFn } from '../../hooks/useAsync'
 import { createComment } from '../../apis/comments'
 
 export default function Post() {
-	const { post, rootComments } = usePost()
+	const { post, rootComments, createLocalComment } = usePost()
 	const {
 		loading,
 		error,
@@ -14,9 +14,9 @@ export default function Post() {
 	} = useAsyncFn(createComment)
 
 	function onCommentCreate(message) {
-		return createCommentFn({ postId: post.id, message }).then((comment) => {
-			console.log(comment)
-		})
+		return createCommentFn({ postId: post.id, message }).then(
+			createLocalComment
+		)
 	}
 
 	return (
