@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import CommentList from './CommentList'
 import { IconButton } from './IconButton'
-import { FaHeart, FaReply, FaEdit, FaTrash } from 'react-icons/fa'
+import { FaHeart, FaReply, FaEdit, FaTrash, FaRegHeart } from 'react-icons/fa'
 import { usePost } from '../../context/PostContext'
 import { CommentForm } from './CommentForm'
 import { useAsyncFn } from '../../hooks/useAsync'
@@ -9,6 +9,7 @@ import {
 	createComment,
 	updateComment,
 	deleteComment,
+	toggleCommentLike,
 } from '../../apis/comments'
 import { useUser } from '../../hooks/useUser'
 
@@ -17,7 +18,14 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
 	timeStyle: 'short',
 })
 
-export default function Comment({ id, message, user, createdAt }) {
+export default function Comment({
+	id,
+	message,
+	user,
+	createdAt,
+	likeCount,
+	likedByMe,
+}) {
 	const [areChildrenHidden, setAreChildrenHidden] = useState(false)
 	const {
 		post,
@@ -25,12 +33,14 @@ export default function Comment({ id, message, user, createdAt }) {
 		createLocalComment,
 		updateLocalComment,
 		deleteLocalComment,
+		toggleLocalCommentLike,
 	} = usePost()
 	const [isReplying, setIsReplying] = useState(false)
 	const [isEditing, setIsEditing] = useState(false)
 	const createCommentFn = useAsyncFn(createComment)
 	const updateCommentFn = useAsyncFn(updateComment)
 	const deleteCommentFn = useAsyncFn(deleteComment)
+	const toggleCommentLikeFn = useAsyncFn(toggleCommentLike)
 	const childComments = getReplies(id)
 
 	const currentUser = useUser()
@@ -61,6 +71,12 @@ export default function Comment({ id, message, user, createdAt }) {
 			})
 	}
 
+	function onToggleCommentLike() {
+		return toggleCommentLikeFn
+			.execute({ id, postId: post.id })
+			.then(({ addLike }) => toggleLocalCommentLike(id, addLike))
+	}
+
 	return (
 		<>
 			<div className="comment">
@@ -83,8 +99,13 @@ export default function Comment({ id, message, user, createdAt }) {
 				)}
 
 				<div className="footer">
-					<IconButton Icon={FaHeart} aria-label="like">
-						2
+					<IconButton
+						Icon={likedByMe ? FaHeart : FaRegHeart}
+						aria-label={likedByMe ? 'unlike' : 'like'}
+						onClick={onToggleCommentLike}
+						disabled={toggleCommentLikeFn.loading}
+					>
+						{likeCount}
 					</IconButton>
 					<IconButton
 						Icon={FaReply}
@@ -110,10 +131,14 @@ export default function Comment({ id, message, user, createdAt }) {
 						</>
 					)}
 				</div>
-				{deleteCommentFn.error && <div>{deleteCommentFn.error}</div>}
+				{deleteCommentFn.error && (
+					<div className="error-msg mt-1">
+						{deleteCommentFn.error}
+					</div>
+				)}
 			</div>
 			{isReplying && (
-				<div>
+				<div className="mt-1 ml-3">
 					<CommentForm
 						autoFocus
 						onSubmit={onCommentReply}
@@ -125,13 +150,14 @@ export default function Comment({ id, message, user, createdAt }) {
 			{childComments?.length > 0 && (
 				<>
 					<div
-						className={`nested-comment-stack ${
+						className={`nested-comments-stack ${
 							areChildrenHidden ? 'hide' : ''
 						}`}
 					>
 						<button
-							area-label="Hide Replies"
 							className="collapse-line"
+							aria-label="Hide Replies"
+							onClick={() => setAreChildrenHidden(true)}
 						/>
 						<div className="nested-comments">
 							<CommentList comments={childComments} />

@@ -23,7 +23,7 @@ export default function Post() {
 		<>
 			<h1>{post.title}</h1>
 			<article>{post.body}</article>
-			<h3>Comments:</h3>
+			<h3 className="comments-title">Comments:</h3>
 			<section>
 				<CommentForm
 					loading={loading}
@@ -31,7 +31,7 @@ export default function Post() {
 					onSubmit={onCommentCreate}
 				/>
 				{rootComments != null && rootComments.length > 0 && (
-					<div>
+					<div className="mt-4">
 						<CommentList comments={rootComments} />
 					</div>
 				)}
